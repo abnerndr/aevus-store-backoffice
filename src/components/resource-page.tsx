@@ -3,9 +3,8 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Edit, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { type Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import type { ZodTypeAny } from "zod"
 
 import { DataTable } from "@/components/data-table"
@@ -82,9 +81,8 @@ export function ResourcePage<
   const updateMutation = useUpdateResource<T, SimpleFormValues>(resource)
   const deleteMutation = useDeleteResource(resource)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<SimpleFormValues>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as never) as Resolver<SimpleFormValues>,
     defaultValues: fields.reduce(
       (acc, field) => ({ ...acc, [field.name]: "" }),
       {} as SimpleFormValues
@@ -195,6 +193,10 @@ export function ResourcePage<
 
   const isPending =
     createMutation.isPending || updateMutation.isPending
+  const singularTitle = title.replace(/s$/, "")
+  const selectedName =
+    (selectedItem as Record<string, unknown> | null)?.name as string | undefined
+  const textareaFieldCount = fields.filter((field) => field.type === "textarea").length
 
   return (
     <div className="space-y-6">
@@ -231,10 +233,10 @@ export function ResourcePage<
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="min-h-0 overflow-hidden p-0 sm:max-w-4xl">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-6 py-5">
             <DialogTitle>
-              {selectedItem ? `Editar ${title.replace(/s$/, "")}` : `Novo ${title.replace(/s$/, "")}`}
+              {selectedItem ? `Editar ${singularTitle}` : `Novo ${singularTitle}`}
             </DialogTitle>
             <DialogDescription>
               {selectedItem
@@ -243,38 +245,113 @@ export function ResourcePage<
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {fields.map((fieldConfig) => (
-                <FormField
-                  key={fieldConfig.name}
-                  control={form.control}
-                  name={fieldConfig.name}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{fieldConfig.label}</FormLabel>
-                      <FormControl>
-                        {fieldConfig.type === "textarea" ? (
-                          <Textarea
-                            placeholder={fieldConfig.placeholder}
-                            rows={3}
-                            {...field}
-                            value={field.value as string}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[82vh] min-h-0 flex-col">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+                  <div className="space-y-5">
+                    <div className="rounded-2xl border border-border/70 bg-muted/15 p-5 shadow-sm">
+                      <div className="mb-5 space-y-1">
+                        <h3 className="text-base font-semibold tracking-tight">
+                          Informações do cadastro
+                        </h3>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          Os campos de texto maior podem ser redimensionados para facilitar a
+                          revisão antes de salvar.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {fields.map((fieldConfig) => (
+                          <FormField
+                            key={fieldConfig.name}
+                            control={form.control}
+                            name={fieldConfig.name}
+                            render={({ field }) => (
+                              <FormItem
+                                className={
+                                  fieldConfig.type === "textarea" ? "md:col-span-2" : undefined
+                                }
+                              >
+                                <FormLabel>{fieldConfig.label}</FormLabel>
+                                <FormControl>
+                                  {fieldConfig.type === "textarea" ? (
+                                    <Textarea
+                                      placeholder={fieldConfig.placeholder}
+                                      rows={6}
+                                      className="min-h-36"
+                                      {...field}
+                                      value={field.value as string}
+                                    />
+                                  ) : (
+                                    <Input
+                                      type={fieldConfig.type || "text"}
+                                      placeholder={fieldConfig.placeholder}
+                                      {...field}
+                                      value={field.value as string}
+                                    />
+                                  )}
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        ) : (
-                          <Input
-                            type={fieldConfig.type || "text"}
-                            placeholder={fieldConfig.placeholder}
-                            {...field}
-                            value={field.value as string}
-                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside className="space-y-4">
+                    <div className="rounded-2xl border border-border/70 bg-background p-5 shadow-sm">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Resumo
+                      </p>
+                      <div className="mt-4 space-y-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Tipo</p>
+                          <p className="font-medium">{title}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Ação</p>
+                          <p className="font-medium">
+                            {selectedItem ? "Edição de registro" : "Novo cadastro"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Campos</p>
+                          <p className="font-medium">
+                            {fields.length} total
+                            {textareaFieldCount > 0
+                              ? ` · ${textareaFieldCount} texto longo`
+                              : ""}
+                          </p>
+                        </div>
+                        {selectedName && (
+                          <div>
+                            <p className="text-muted-foreground">Registro</p>
+                            <p className="font-medium">{selectedName}</p>
+                          </div>
                         )}
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-              <DialogFooter>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-dashed border-border/80 bg-muted/10 p-5">
+                      <p className="text-sm font-semibold tracking-tight">
+                        Dicas r&#225;pidas
+                      </p>
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                        Use o redimensionamento do campo para revisar descri&#231;&#245;es longas
+                        sem perder o contexto do restante do formul&#225;rio.
+                      </p>
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                        O rodap&#233; permanece vis&#237;vel para salvar ou cancelar sem precisar
+                        voltar ao topo.
+                      </p>
+                    </div>
+                  </aside>
+                </div>
+              </div>
+
+              <DialogFooter className="shrink-0 border-t border-border/70 bg-background/95 px-6 py-4 supports-[backdrop-filter]:bg-background/90">
                 <Button
                   type="button"
                   variant="outline"

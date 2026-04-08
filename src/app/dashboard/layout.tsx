@@ -2,7 +2,6 @@
 
 import {
   Box,
-  Building2,
   ChevronDown,
   ClipboardList,
   Factory,
@@ -55,6 +54,15 @@ const navGroups = [
         label: "Especificações",
         icon: ClipboardList,
       },
+    ],
+  },
+  {
+    label: "Vendas",
+    items: [
+      { href: "/dashboard/orders", label: "Pedidos", icon: ClipboardList },
+      { href: "/dashboard/customers", label: "Clientes", icon: Users },
+      { href: "/dashboard/coupons", label: "Cupons", icon: Tag },
+      { href: "/dashboard/promotions", label: "Promoções", icon: Box },
     ],
   },
   {
